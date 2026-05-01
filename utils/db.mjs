@@ -5,14 +5,12 @@ class DBClient {
     const host = process.env.DB_HOST || 'localhost';
     const port = process.env.DB_PORT || '27017';
     const database = process.env.DB_DATABASE || 'files_manager';
-    
     const url = `mongodb://${host}:${port}`;
-    
-    // Utilisation de l'import par défaut pour éviter l'erreur de "Named export"
+
     this.client = new mongodb.MongoClient(url, { useUnifiedTopology: true });
     this.dbName = database;
-    
-    // Initialisation de la connexion
+    this.status = false;
+
     this.client.connect()
       .then(() => {
         this.status = true;
@@ -25,7 +23,6 @@ class DBClient {
 
   /**
    * Vérifie si la connexion à MongoDB est active.
-   * On utilise 'status' mis à jour par la promesse de connexion.
    */
   isAlive() {
     return !!this.status;
