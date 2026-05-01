@@ -1,51 +1,49 @@
 import { createClient } from 'redis';
+import { promisify } from 'util';
 
 class RedisClient {
   constructor() {
-    // Création du client redis
     this.client = createClient();
 
-    // Gestion des erreurs affichée dans la console
+    // Gestion des erreurs
     this.client.on('error', (err) => {
-      console.error('Redis Client Error', err);
+      console.error('Redis client error:', err.message || err.toString());
     });
 
-    // Connexion immédiate
-    this.client.connect().catch((err) => {
-      // On capture l'erreur de connexion pour éviter de faire crash le process
-      // mais on laisse l'event 'error' gérer l'affichage
-    });
+    // Promisification des méthodes pour utiliser async/await
+    // Indispensable car la version installée semble être la v3
+    this.getAsync = promisify(this.client.get).bind(this.client);
+    this.setAsync = promisify(this.client.set).bind(this.client);
+    this.delAsync = promisify(this.client.del).bind(this.client);
   }
 
   /**
-   * Vérifie si la connexion est active.
-   * Utilise 'isOpen' pour retourner false si le service redis-server est arrêté.
+   * Vérifie si la connexion à Redis est active.
+   * En v3, on vérifie la propriété connected.
    */
   isAlive() {
-    return this.client.isOpen;
+    return this.client.connected;
   }
 
   /**
-   * Récupère la valeur associée à une clé
+   * Récupère la valeur d'une clé.
    */
   async get(key) {
-    return this.client.get(key);
+    return this.getAsync(key);
   }
 
   /**
-   * Stocke une valeur avec une durée d'expiration (TTL)
+   * Stocke une valeur avec une expiration en secondes.
    */
   async set(key, value, duration) {
-    await this.client.set(key, value, {
-      EX: duration,
-    });
+    await this.setAsync(key, value, 'EX', duration);
   }
 
   /**
-   * Supprime une clé de Redis
+   * Supprime une clé de Redis.
    */
   async del(key) {
-    await this.client.del(key);
+    await this.delAsync(key);
   }
 }
 
