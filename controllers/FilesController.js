@@ -1,25 +1,28 @@
 import { ObjectId } from 'mongodb';
-import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
+import dbClient from '../utils/db';
 
 class FilesController {
-  // ... (garde postUpload ici)
+  // ... garde ton postUpload ici ...
 
-  /**
-   * Récupère un document de fichier spécifique par ID pour l'utilisateur authentifié
-   */
   static async getShow(req, res) {
     const token = req.headers['x-token'];
     const userId = await redisClient.get(`auth_${token}`);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     const fileId = req.params.id;
+    // On cherche le fichier par son ID ET le userId du propriétaire
     const file = await dbClient.client.db(dbClient.dbName).collection('files').findOne({
       _id: ObjectId(fileId),
       userId: ObjectId(userId),
     });
 
-    if (!file) return res.status(404).json({ error: 'Not found' });
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
 
     return res.status(200).json({
       id: file._id,
@@ -31,27 +34,28 @@ class FilesController {
     });
   }
 
-  /**
-   * Liste les fichiers d'un parentId spécifique avec pagination (20 par page)
-   */
   static async getIndex(req, res) {
     const token = req.headers['x-token'];
     const userId = await redisClient.get(`auth_${token}`);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     const { parentId = 0, page = 0 } = req.query;
-    const skip = parseInt(page, 10) * 20;
+    const skipPage = parseInt(page, 10) * 20;
 
-    // Préparation du filtre parentId (0 ou ObjectId)
-    const matchQuery = {
-      userId: ObjectId(userId),
-      parentId: parentId === '0' || parentId === 0 ? 0 : ObjectId(parentId),
-    };
+    // Construction du filtre de recherche
+    const query = { userId: ObjectId(userId) };
+    if (parentId !== 0 && parentId !== '0') {
+      query.parentId = ObjectId(parentId);
+    } else {
+      query.parentId = 0;
+    }
 
-    // Utilisation de aggregate pour la pagination et le formatage
     const files = await dbClient.client.db(dbClient.dbName).collection('files').aggregate([
-      { $match: matchQuery },
-      { $skip: skip },
+      { $match: query },
+      { $skip: skipPage },
       { $limit: 20 },
       {
         $project: {
