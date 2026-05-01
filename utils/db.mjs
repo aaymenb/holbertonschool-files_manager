@@ -1,57 +1,50 @@
-import { MongoClient } from 'mongodb';
+import mongodb from 'mongodb';
 
 class DBClient {
   constructor() {
-    // Récupération des variables d'environnement ou valeurs par défaut
     const host = process.env.DB_HOST || 'localhost';
     const port = process.env.DB_PORT || '27017';
     const database = process.env.DB_DATABASE || 'files_manager';
     
     const url = `mongodb://${host}:${port}`;
     
-    // Initialisation du client MongoDB
-    this.client = new MongoClient(url, { useUnifiedTopology: true });
+    // Utilisation de l'import par défaut pour éviter l'erreur de "Named export"
+    this.client = new mongodb.MongoClient(url, { useUnifiedTopology: true });
     this.dbName = database;
-    this.connected = false;
-
-    // Tentative de connexion
+    
+    // Initialisation de la connexion
     this.client.connect()
       .then(() => {
-        this.connected = true;
+        this.status = true;
       })
       .catch((err) => {
-        console.error('MongoDB connection error:', err.message);
-        this.connected = false;
+        console.error(err);
+        this.status = false;
       });
   }
 
   /**
-   * Vérifie si la connexion à MongoDB est établie
-   * @returns {boolean}
+   * Vérifie si la connexion à MongoDB est active.
+   * On utilise 'status' mis à jour par la promesse de connexion.
    */
   isAlive() {
-    return this.connected;
+    return !!this.status;
   }
 
   /**
-   * Compte le nombre de documents dans la collection 'users'
-   * @returns {Promise<number>}
+   * Retourne le nombre de documents dans la collection 'users'.
    */
   async nbUsers() {
-    const db = this.client.db(this.dbName);
-    return db.collection('users').countDocuments();
+    return this.client.db(this.dbName).collection('users').countDocuments();
   }
 
   /**
-   * Compte le nombre de documents dans la collection 'files'
-   * @returns {Promise<number>}
+   * Retourne le nombre de documents dans la collection 'files'.
    */
   async nbFiles() {
-    const db = this.client.db(this.dbName);
-    return db.collection('files').countDocuments();
+    return this.client.db(this.dbName).collection('files').countDocuments();
   }
 }
 
-// Création et export d'une instance unique
 const dbClient = new DBClient();
 export default dbClient;
