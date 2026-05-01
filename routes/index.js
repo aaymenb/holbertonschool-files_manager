@@ -1,16 +1,17 @@
 import express from 'express';
 import AppController from '../controllers/AppController';
 import UsersController from '../controllers/UsersController';
+import AuthController from '../controllers/AuthController';
 
 const router = express.Router();
 
-// Route pour vérifier l'état des services (Redis et DB)
 router.get('/status', AppController.getStatus);
-
-// Route pour obtenir les statistiques (nb de users et de files)
 router.get('/stats', AppController.getStats);
-
-// Route pour créer un nouvel utilisateur
 router.post('/users', UsersController.postNew);
+
+// Nouvelles routes d'authentification
+router.get('/connect', AuthController.getConnect);
+router.get('/disconnect', AuthController.getDisconnect);
+router.get('/users/me', UsersController.getMe);
 
 export default router;
